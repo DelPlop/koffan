@@ -1,5 +1,5 @@
 REGISTRY ?= $(error REGISTRY is required, e.g. make release REGISTRY=registry.example.com)
-IMAGE    := koffan
+IMAGE    := shoplist
 TAG      := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || cat VERSION | tr -d '\n')
 REF      := $(REGISTRY)/$(IMAGE)
 
