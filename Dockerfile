@@ -13,8 +13,9 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Read version and build with ldflags
-RUN VERSION=$(cat VERSION | tr -d '\n') && \
+# Read version and build with ldflags (VERSION build arg overrides VERSION file)
+ARG VERSION
+RUN VERSION=${VERSION:-$(cat VERSION | tr -d '\n')} && \
     CGO_ENABLED=1 go build -ldflags "-X shopping-list/handlers.AppVersion=$VERSION" -o shopping-list .
 
 # Production stage

@@ -137,6 +137,37 @@ docker-compose up -d
 | `LOGIN_LOCKOUT_MINUTES` | `30` | Lockout duration after exceeding limit |
 | `API_TOKEN` | *(disabled)* | Enable REST API with this token ([docs](https://github.com/PanSalut/Koffan/wiki/REST-API)) |
 
+## Build and Push to a Registry
+
+A `Makefile` is provided to build and push the Docker image to your own registry.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `make build REGISTRY=...` | Build the image (tagged with current version and `latest`) |
+| `make push REGISTRY=...` | Push both tags to the registry |
+| `make release REGISTRY=...` | Build then push in one step |
+
+### Usage
+
+```bash
+# Build and push in one step
+make release REGISTRY=registry.example.com
+
+# Or step by step
+make build REGISTRY=registry.example.com
+make push REGISTRY=registry.example.com
+```
+
+The image is tagged automatically from the latest git tag (e.g. `v2.3`) and also as `latest`. The resulting image references will be:
+- `registry.example.com/koffan:v2.3`
+- `registry.example.com/koffan:latest`
+
+> `REGISTRY` is required — the command will fail with an error if omitted.
+
+---
+
 ## Deploy to Your Server
 
 ### Docker
