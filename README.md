@@ -160,11 +160,82 @@ make build REGISTRY=registry.example.com
 make push REGISTRY=registry.example.com
 ```
 
-The image is tagged automatically from the latest git tag (e.g. `v2.3`) and also as `latest`. The resulting image references will be:
+### Versioning
+
+The tag is resolved automatically in this order:
+
+1. Latest git tag (`git describe --tags --abbrev=0`)
+2. Content of the `VERSION` file if no git tag is found
+
+To override the tag explicitly, pass `TAG=` on the command line:
+
+```bash
+make release REGISTRY=registry.example.com TAG=v2.3
+```
+
+> Note: the variable is `TAG`, not `VERSION`. Passing `VERSION=` has no effect.
+
+The resulting image references will be:
 - `registry.example.com/koffan:v2.3`
 - `registry.example.com/koffan:latest`
 
 > `REGISTRY` is required — the command will fail with an error if omitted.
+
+---
+
+## SSO with Authentik (Traefik Forward Auth)
+
+Koffan supports delegating authentication entirely to Authentik via Traefik's forward auth mechanism. In this mode, Koffan's built-in login is disabled and Authentik handles the auth flow.
+
+### How it works
+
+```
+Browser → Traefik → Authentik (forward auth check) → Koffan
+```
+
+For each request, Traefik asks Authentik whether the user is authenticated. If not, Authentik redirects to its login page. Once authenticated, the request is forwarded to Koffan with `DISABLE_AUTH=true`, which skips Koffan's own session checks.
+
+### 1. Configure Authentik
+
+In the Authentik admin panel:
+
+1. **Create a Provider** → Type: **Forward Auth (single application)**
+   - Authentication flow: your default flow
+   - Authorization flow: your default flow
+   - External host: `https://koffan.example.com`
+2. **Create an Application** linked to this provider
+3. **Assign the application** to the users or groups that should have access
+
+### 2. Configure the Traefik middleware
+
+If your Authentik outpost doesn't already define the `authentik` middleware, add it to your Traefik static or dynamic config (or in the Authentik outpost's own `docker-compose.yaml` labels):
+
+```yaml
+labels:
+  - "traefik.http.middlewares.authentik.forwardauth.address=http://<authentik-outpost>:9000/outpost.goauthentik.io/auth/traefik"
+  - "traefik.http.middlewares.authentik.forwardauth.trustForwardHeader=true"
+  - "traefik.http.middlewares.authentik.forwardauth.authResponseHeaders=X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid"
+```
+
+Replace `<authentik-outpost>` with the hostname or container name of your Authentik proxy outpost.
+
+> If the middleware is already defined elsewhere (e.g. `authentik@file` or `authentik@docker`), skip this step and just set `AUTHENTIK_MIDDLEWARE` accordingly.
+
+### 3. Deploy Koffan
+
+Copy `.env.example` to `.env` and fill in the values:
+
+```env
+DATA_DIR=./data
+```
+
+Then start the stack:
+
+```bash
+docker compose up -d
+```
+
+Koffan will be accessible at `https://koffan.example.com`, protected by Authentik. The built-in login page is no longer reachable.
 
 ---
 
